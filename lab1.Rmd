@@ -1,0 +1,206 @@
+---
+title: "lab1"
+author: "Dawid Dąbkowski"
+date: "2 października 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+set.seed(0)
+```
+
+# Loading the data
+
+```{r}
+www <- "https://www.mimuw.edu.pl/~noble/courses/SDA/data/stockexchange.dat"
+stockexchange <- read.table(www, header=T)
+```
+
+# Exercise 1: Simulating observations from a discrete distribution
+
+```{r}
+throw <- sample(1:6, 600, replace=T)
+table(throw)
+hist(throw, xlab="score", ylab="frequency")
+barplot(table(throw))
+mean(throw)
+sd(throw)
+```
+
+# Exercise 2: Parameter estimation for a uniform distribution
+
+```{r}
+rec <- runif(100, min=0, max=20)
+rec <- matrix(runif(2000, min=0, max=20), 100, 20)
+ahat1 <- 2*apply(rec, 1, mean)
+ahat2 <- (21/20)*apply(rec, 1, max)
+plot(ahat1, col="red")
+plot(ahat2, col="blue", axes=T)
+hist(ahat1, breaks=20)
+hist(ahat2, breaks=20)
+```
+
+The moment method estimator seems to be simmetrically distributed around the mean 20, which has the highest probabilty. The maximum likelihood estimator is skewed, with the highest probabilty above 20 (around 21).
+
+Note that the density function of the $\hat{a}_2$ is $g_2(x) = \frac{n}{20^n}x^{n-1}1_{[0,20]}(x)$
+
+The theoretical and estimated means of $\hat{a}_1$ and $\hat{a}_2$ are:
+
+$E(\hat{a}_1) = E(2\bar{X}) = \frac{2}{n}\sum_{j}E(x_j) = \frac{2\cdot n\cdot 10}{2} = 20$
+```{r}
+mean(ahat1)
+```
+
+$E(\hat{a}_2) = E(\frac{n+1}{n}max_{j}x_j) = \frac{n+1}{n}\int_{0}^{20}x\cdot\frac{n}{20^n}x^{n-1}\,dt = \frac{n+1}{20^n}\int_{0}^{20}x^n\,dt = \frac{n+1}{20^n} \cdot \frac{20^{n+1}}{n+1} = 20$
+```{r}
+mean(ahat2)
+```
+
+The theoretical and estimated standard deviations are:
+
+$sd(\hat{a}_1) = \sqrt{Var(2\bar{x})} = \sqrt{\frac{4}{n^2}\sum_{j}Var(x_j)} = \sqrt{\frac{4}{n^2}\cdot n \cdot \frac{20^2}{12}} = \sqrt{\frac{20^2}{3n}} = \frac{20}{\sqrt{60}}$
+```{r}
+20/sqrt(60)
+sd(ahat1)
+```
+
+$sd(\hat{a}_2) = \sqrt{Var(\frac{n+1}{n}max_{j}x_j)} = \sqrt{E([...]^2)-E^2([...])} = \sqrt{(\frac{n+1}{n})^2(\int_{0}^{20}x^2\cdot \frac{n}{20^n}\cdot x^{n-1}\,dx) - 20^2} =$
+
+$\sqrt{(\frac{n+1}{n})^2\cdot\frac{n}{20^n}\frac{20^{n+2}}{n+2} - 20^2} = \sqrt{\frac{(n+1)^2}{n(n+2)}\cdot 20^2 - 20^2} = 20 \sqrt{\frac{(n+1)^2}{n(n+2)} - 1} = 20 \sqrt{\frac{1}{440}}$
+```{r}
+20*sqrt(1/440)
+sd(ahat2)
+```
+
+# Exercise 3: Comparison of Volatilities
+
+```{r}
+library(car)
+stock2 <- abs(stockexchange)
+qqnorm(stock2[,1])
+qqline(stock2[,1])
+qqPlot(stock2[,1])
+```
+
+```{r}
+m = mean(stock2[,1])
+s = sd(stock2[,1])
+hist(stock2[,1], probability=T)
+pt <- seq(min(stock2[,1]), max(stock2[,1]), length=40)
+lines(pt, dnorm(pt, mean=m, sd=s), col="blue")
+```
+
+```{r}
+z <- stock2[,1]
+h <- hist(z, xlab="residual", main="Histogram with Normal Curve")
+xfit <- seq(min(z), max(z), length=40)
+yfit <- dnorm(xfit, mean=mean(z), sd=sd(z))
+lines(xfit, yfit, col="red", lwd=2)
+```
+
+```{r, include=F, eval=F}
+stock2 <- abs(stockexchange)
+z <- stock2[,1]
+y <- stock2[,2]
+par(mfrow=c(2,1))
+h <- hist(z, xlab="residual", main="Histogram with Normal Curve")
+xfit <- seq(min(z), max(z), length=40)
+yfit <- dnorm(xfit, mean=mean(z), sd=sd(z))
+lines(xfit, yfir, col="red", lwd=2)
+h2 <- hist(y, xlab="residual", main="Histogram with Normal Curve")
+xfit2 <- seq(min(y), max(y), length=40)
+yfit2 <- dnorm(xfit2, mean=mean(y), sd=sd(y))
+lines(xfit2, yfit2, col="blue", lwd=2)
+```
+
+```{r}
+stocktrans <- log(stock2 + 0.01)
+s <- apply(stocktrans, 2, sd)
+s
+m <- apply(stocktrans, 2, mean)
+m
+t.test(stocktrans[,1], stocktrans[,2], var.equal=T, paired=F)
+t.test(stocktrans[,1], stocktrans[,2], alternative="greater", paired=F, var.equal=T, conf.level=0.95)
+```
+
+From the t-student test, we can conclude, that the mean of the second stock is significantly greater than the mean of the first stock.
+
+# Exercise 4: Confidence intervals for differences in expected values when variances are different
+
+```{r}
+x <- rnorm(10, 22, 6)
+y <- rnorm(31, 16, 2)
+t.test(x, y, alternative="two.sided", paired=F, var.equal=F, conf.level=0.95)
+var.test(x, y, ratio=1, alternative="two.sided", conf.level=0.95)
+```
+
+From the low p-values we conclude that the means and variances are significantly different.
+
+```{r}
+qf(c(0.025, 0.975), 9, 30)
+t.test(x, y, alternative="two.sided", paired=F, var.equal=T, conf.level=0.95)
+
+```
+
+With the wrong assumption we have much more degrees of freedom and higher t-statistic giving us lower p-value. So we are more likely to take the alternative hypothesis.
+
+# Exercise 5: Confidence level when using normal approximation
+
+```{r}
+n <- 16
+p <- 0.3
+bindat <- rbinom(1000, n, p)
+phat <- bindat/n
+lower <- phat - 1.96*sqrt(phat*(1-phat)/n)
+upper <- phat + 1.96*sqrt(phat*(1-phat)/n)
+l <- sum(lower>p)
+u <- sum(upper<p)
+miss <- l+u
+miss
+```
+
+We have missed much more than theoretical 50.
+
+```{r}
+n <- 80
+p <- 0.3
+bindat <- rbinom(1000, n, p)
+phat <- bindat/n
+lower <- phat - 1.96*sqrt(phat*(1-phat)/n)
+upper <- phat + 1.96*sqrt(phat*(1-phat)/n)
+l <- sum(lower>p)
+u <- sum(upper<p)
+miss <- l+u
+miss
+```
+
+With more observations we are closer to the theoretical 50.
+
+# Exercise 6: Power of the t-test
+
+```{r}
+n <- 16
+N <- 1000
+X <- matrix(rnorm(n*N, 5, 1.2), N, n)
+me <- apply(X, 1, mean)
+s <- apply(X, 1, sd)
+u <- (me-5)/(s/sqrt(n))
+tval <- qt(0.975, n-1)
+reject0 <- sum(u>tval)+sum(u<(-1)*tval)
+reject0
+```
+
+```{r}
+X <- matrix(rnorm(n*N, 6, 1.2), N, n)
+me <- apply(X, 1, mean)
+s <- apply(X, 1, sd)
+u <- (me-5)/(s/sqrt(n))
+reject1 <- sum(u>tval)+sum(u<(-1)*tval)
+reject1
+```
+
+```{r}
+binom.test(reject1, 1000, conf.level=0.95)
+power.t.test(n=16, delta=1, sd=1.2, sig.level=0.05, type="one.sample", alternative="two.sided", strict=T)
+```
