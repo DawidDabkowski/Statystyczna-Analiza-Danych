@@ -1,0 +1,68 @@
+---
+title: "lab3"
+author: "Dawid Dąbkowski"
+date: "16 października 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Exercise 1: Simple Linear Regression
+
+```{r}
+set.seed(0)
+library(ggplot2)
+library(car)
+```
+
+```{r}
+data(faithful)
+ggplot(faithful, aes(x=eruptions, y=waiting)) + geom_point()
+cor(faithful$eruptions, faithful$waiting)
+cor.test(faithful$eruptions, faithful$waiting)
+```
+
+```{r}
+fit <- lm(waiting ~ eruptions, faithful)
+anova(fit)
+summary(fit)
+ggplot(faithful, aes(x=eruptions, y=waiting)) + geom_point() + geom_smooth(method="lm")
+```
+
+```{r}
+z <- fit$residuals
+qqnorm(z)
+qqline(z)
+qqPlot(z)
+```
+
+```{r}
+m = mean(z)
+s = sd(z)
+hist(z, probability=TRUE, breaks=25)
+pt <- seq(min(z), max(z), length=40)
+lines(pt, dnorm(pt, mean=m, sd=s), col="red")
+```
+
+```{r}
+newdata=data.frame(eruptions=4)
+predict(fit, newdata, interval="predict")
+```
+
+```{r}
+a <- model.matrix(fit)
+xpinv <- solve(t(a)%*%a)
+xpinv
+```
+
+## Exercise 2: Using dummy variables and computing prediction itervals
+
+```{r}
+safety <- read.csv(file=url("https://www.mimuw.edu.pl/~noble/courses/SDA/data/safety.csv"), header=T, sep=" ")
+```
+
+```{r}
+qplot(x1, y, colour=x2, data=safety)
+```
